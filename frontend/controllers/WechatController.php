@@ -26,7 +26,7 @@ use EasyWeChat\Message\News;
 use frontend\models\Member;
 use yii\helpers\Url;
 use yii\web\Controller;
-class WeixinController extends Controller
+class WechatController extends Controller
 {
     public $enableCsrfValidation = false;
 }

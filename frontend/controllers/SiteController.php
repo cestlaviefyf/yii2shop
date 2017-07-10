@@ -2,8 +2,10 @@
 namespace frontend\controllers;
 date_default_timezone_set('PRC');
 
+use backend\components\SphinxClient;
 use backend\models\Goods;
 use backend\models\GoodsCategory;
+use backend\models\GoodsSearchForm;
 use frontend\models\Address;
 use frontend\models\Cart;
 use frontend\models\Member;
@@ -12,6 +14,7 @@ use frontend\models\OrderGoods;
 use Yii;
 use yii\base\InvalidParamException;
 use yii\db\Exception;
+use yii\helpers\ArrayHelper;
 use yii\web\BadRequestHttpException;
 use yii\web\Controller;
 use yii\filters\VerbFilter;
@@ -91,8 +94,32 @@ class SiteController extends Controller
     public function actionList()
     {
         $this->layout = 'list';
-        $id = $_GET['cate_id'];
-        $goods = Goods::find()->andWhere(['=', 'goods_category_id', $id])->andWhere(['!=', 'status', '-1'])->all();
+        $search = new GoodsSearchForm();
+        $query= Goods::find()->where(['!=', 'status', '-1']);
+        if($keyword = \Yii::$app->request->get('keyword')){
+            $cl = new SphinxClient();
+            $cl->SetServer ( '127.0.0.1', 9312);
+            //$cl->SetServer ( '10.6.0.6', 9312);
+            //$cl->SetServer ( '10.6.0.22', 9312);
+            //$cl->SetServer ( '10.8.8.2', 9312);
+            $cl->SetConnectTimeout ( 10 );
+            $cl->SetArrayResult ( true );
+            // $cl->SetMatchMode ( SPH_MATCH_ANY);
+            $cl->SetMatchMode ( SPH_MATCH_ALL);
+            $cl->SetLimits(0, 1000);
+            $res = $cl->Query($keyword, 'goods');//shopstore_search
+            if(isset($res['matches'])){
+                $ids = ArrayHelper::map($res['matches'],'id','id');
+                $goods = $query->andWhere(['in','id',$ids])->all();
+            }else{
+                $goods = $query->andWhere(['id'=>0])->all();
+            }
+        }else{
+            $id = \Yii::$app->request->get('cate_id');
+            $goods=$query->andwhere(['=', 'goods_category_id', $id])->all();
+        }
+//        $goods->andWhere(['=','goods_category_id',$id])->all();
+//        var_dump($lists);exit;
         if ($goods) {
             return $this->render('list', ['goods' => $goods]);
         } else {

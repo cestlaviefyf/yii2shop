@@ -4,10 +4,13 @@ namespace backend\controllers;
 date_default_timezone_set('PRC');
 
 use backend\components\RbacFliter;
+use backend\components\SphinxClient;
 use backend\models\Gallery;
 use backend\models\Goods;
 use backend\models\GoodsCategory;
 use backend\models\GoodsDayCount;
+use backend\models\GoodsSearchForm;
+use phpDocumentor\Reflection\DocBlock\Tags\Var_;
 use yii\data\Pagination;
 use yii\helpers\ArrayHelper;
 use xj\uploadify\UploadAction;
@@ -28,14 +31,36 @@ class GoodsController extends \yii\web\Controller
 
     public function actionIndex()
     {
-        $query =Goods::find()->where(['!=','status','-1']);
+        $search = new GoodsSearchForm();
+        $query =Goods::find()->andwhere(['!=','status','-1']);
+//        var_dump(\Yii::$app->request->get('keyword'));exit;
+        if($keyword = \Yii::$app->request->get('keyword')){
+            $cl = new SphinxClient();
+            $cl->SetServer ( '127.0.0.1', 9312);
+            //$cl->SetServer ( '10.6.0.6', 9312);
+            //$cl->SetServer ( '10.6.0.22', 9312);
+            //$cl->SetServer ( '10.8.8.2', 9312);
+            $cl->SetConnectTimeout ( 10 );
+            $cl->SetArrayResult ( true );
+            // $cl->SetMatchMode ( SPH_MATCH_ANY);
+            $cl->SetMatchMode ( SPH_MATCH_ALL);
+            $cl->SetLimits(0, 1000);
+            $res = $cl->Query($keyword, 'goods');//shopstore_search
+
+            if(isset($res['matches'])){
+                $ids = ArrayHelper::map($res['matches'],'id','id');
+                $query->andWhere(['in','id',$ids]);
+            }else{
+                $query->andWhere(['id'=>0]);
+            }
+        }
         $count = $query->count();
         $page = new Pagination([
             'totalCount' => $count,
             'defaultPageSize'=>3
         ]);
         $models = $query->offset($page->offset)->limit($page->limit)->all();
-        return $this->render('index',['models'=>$models,'page'=>$page]);
+        return $this->render('index',['models'=>$models,'page'=>$page,'search'=>$search]);
     }
 
     public function actionAdd(){
@@ -155,4 +180,23 @@ class GoodsController extends \yii\web\Controller
             ],
         ];
     }
+/**
+    public function actionTest(){
+            $cl = new SphinxClient();
+            $cl->SetServer ( '127.0.0.1', 9312);
+        //$cl->SetServer ( '10.6.0.6', 9312);
+        //$cl->SetServer ( '10.6.0.22', 9312);
+        //$cl->SetServer ( '10.8.8.2', 9312);
+            $cl->SetConnectTimeout ( 10 );
+            $cl->SetArrayResult ( true );
+        // $cl->SetMatchMode ( SPH_MATCH_ANY);
+            $cl->SetMatchMode ( SPH_MATCH_ALL);
+            $cl->SetLimits(0, 1000);
+            $info = 'apple';
+            $res = $cl->Query($info, 'goods');//shopstore_search
+        //print_r($cl);
+            print_r($res);
+
+    }
+*/
 }

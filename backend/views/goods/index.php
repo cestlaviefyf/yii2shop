@@ -4,6 +4,24 @@ if(\Yii::$app->user->can('goods/add')){
 }
 ?>
 <p></p>
+
+<?php
+$form = \yii\bootstrap\ActiveForm::begin([
+        'method'=>'get',
+    'action'=>\yii\helpers\Url::to(['goods/index']),
+    'options'=>['class'=>'form-inline']
+]);
+echo $form->field($search,'name')->textInput(['placeholder'=>'商品名','name'=>'keyword'])->label(false);
+echo '&nbsp;';
+echo $form->field($search,'sn')->textInput(['placeholder'=>'货号'])->label(false);
+echo '&nbsp;';
+echo $form->field($search,'min_price')->textInput(['placeholder'=>'价格下限'])->label(false);
+echo '&nbsp;';
+echo $form->field($search,'max_price')->textInput(['placeholder'=>'价格上限'])->label('-');
+echo '&nbsp;';
+echo \yii\bootstrap\Html::submitButton('搜索');
+\yii\bootstrap\ActiveForm::end();
+?>
 <table class="table table-bordered">
     <tr>
         <th>商品名称</th>
